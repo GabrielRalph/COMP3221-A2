@@ -1,4 +1,5 @@
 from server import Server
+from mlModel import MLModel
 
 class FedAvgServer(Server):
 
@@ -9,7 +10,7 @@ class FedAvgServer(Server):
     def on_update(self, models):
         # aggregate
 
-        return "w{t + 1}"
+        return MLModel()
 
 
 fedAvg = FedAvgServer("server", 6000, 6)

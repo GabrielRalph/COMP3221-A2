@@ -1,7 +1,8 @@
 from client import Client
+from mlModel import MLModel
 
-class fedAvgClient(Client):
-    
+class FedAvgClient(Client):
+
     def run(self):
         self.data_size = 1024
         self.connect_socket()
@@ -9,4 +10,8 @@ class fedAvgClient(Client):
     def on_update(self, w_t):
         # create new model
 
-        return "w(k){t + 1}"
+        return MLModel()
+
+
+client = FedAvgClient("me", 6000)
+client.run()
