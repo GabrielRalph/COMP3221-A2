@@ -40,8 +40,7 @@ class Client:
                     debug("update received")
 
                     new_update = self.on_update(update)
-                    time.sleep(3)
-                    s.sendall(bytes(new_update, encoding='utf-8'))
+                    s.sendall(bytes(f"{new_update}", encoding='utf-8'))
                     debug(f"update sent {new_update}")
 
         except KeyboardInterrupt:

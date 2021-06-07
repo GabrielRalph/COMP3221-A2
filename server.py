@@ -136,9 +136,7 @@ class Server:
         #Get updates from all current clients in parrel
         threads = []
         for client in clients:
-            client.update = "this model"
             threads.append(client.update_on_thread(f"{self.model}"))
-
 
         #wait for all threads to finish
         for thread in threads:
