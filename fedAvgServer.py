@@ -57,12 +57,12 @@ class FedAvgServer(Server):
         print(f"Global Round: {str(self.global_round)} Average accuracy across all clients : {str(self.avg_acc)}")
 
         # calculate avg loss
-        self.avgLoss = 0;
+        self.avg_loss = 0;
         for m in models:
-            self.avgLoss += m["loss"];
-        self.avgLoss = self.avgLoss / len(models);
+            self.avg_loss += m["loss"];
+        self.avg_loss = self.avg_loss / len(models);
 
-        self.loss.append(self.avgLoss)
+        self.loss.append(self.avg_loss)
 
 
         # clear gobal model before aggregation
