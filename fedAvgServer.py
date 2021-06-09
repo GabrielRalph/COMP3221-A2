@@ -54,7 +54,7 @@ class FedAvgServer(Server):
         # calculate avg accuracy
         self.avg_acc = self.evaluate(models)
         self.acc.append(self.avg_acc)
-        print(f"Global Round: {str(self.global_round)} Average accuracy across all clients : {str(avg_acc)}")
+        print(f"Global Round: {str(self.global_round)} Average accuracy across all clients : {str(self.avg_acc)}")
 
         # calculate avg loss
         self.avgLoss = 0;

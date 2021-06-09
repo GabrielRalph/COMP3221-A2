@@ -1,7 +1,13 @@
 from fedAvgServer import FedAvgServer
 from mlModel import MLModel
 
+
 import sys
+import time
+
+
+start_time = time.time()
+
 
 if __name__ == "__main__":
 
@@ -43,3 +49,27 @@ if __name__ == "__main__":
     #   3. Launch Server
     server = FedAvgServer("server", port_num, K, M);
     server.run();
+
+
+    #   4. Graph Results
+
+    end_time = time.time()
+    print(f"Final AVG Loss: {str(server.avgLoss.item())}\nFinal AVG Accuracy {str(server.avg_acc)}")
+    print("Run-time was :", end_time - start_time)
+
+    #Do final plots (LOSS)
+    plt.figure(1,figsize=(5, 5))
+    plt.plot(server.loss, label="FedAvg", linewidth  = 1)
+    plt.legend(loc='upper right', prop={'size': 12}, ncol=2)
+    plt.ylabel('Training Loss')
+    plt.xlabel('Global rounds')
+    plt.show()
+
+    #Do final plots (ACCURACY)
+    plt.figure(2,figsize=(5, 5))
+    plt.plot(server.acc, label="FedAvg", linewidth  = 1)
+    plt.ylim([0,  0.99])
+    plt.legend(loc='upper right', prop={'size': 12}, ncol=2)
+    plt.ylabel('Testing Acc')
+    plt.xlabel('Global rounds')
+    plt.show()
