@@ -15,5 +15,5 @@ class FedAvgClient(Client):
         return MLModel()
 
 
-client = FedAvgClient("me", 6000)
+client = FedAvgClient("me", 6000, 5)
 client.run()

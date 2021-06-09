@@ -16,5 +16,5 @@ class FedAvgServer(Server):
         return MLModel()
 
 
-fedAvg = FedAvgServer("server", 6000, 6)
+fedAvg = FedAvgServer("server", 6000, 6, 123)
 fedAvg.run()
