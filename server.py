@@ -4,6 +4,7 @@ import socket
 
 HOST = "127.0.0.1"
 HANDSHAKE_SIZE = 1048
+MODEL_SIZE = 4096
 INIT_TIME = 5
 T = 100
 
@@ -19,6 +20,7 @@ class ClientHandler:
         self.host = host
         self.port = port
         self.connection = connection
+        self.current_iteration = 0;
 
         handshake = self.connection.recv(HANDSHAKE_SIZE)
         (self.id, self.data_size) = handshake.decode('utf-8').split(",")
@@ -52,12 +54,12 @@ class ClientHandler:
     def get_update(self):
         try:
             debug(f"\t{self.id}: sending update")
-            self.connection.sendall(bytes(self.update, encoding='utf-8'))
+            self.connection.sendall(self.update)
             print(f"Getting local model from client {self.id}")
-            new = self.connection.recv(self.data_size)
+            new = self.connection.recv(MODEL_SIZE)
             debug(f"\t{self.id}: received update")
-            new = new.decode('utf-8')
             self.update = new
+            this.current_iteration +== 1
         except:
             debug(f"\t{self.id}: error updating")
             self.update = None
@@ -136,7 +138,7 @@ class Server:
         #Get updates from all current clients in parrel
         threads = []
         for client in clients:
-            threads.append(client.update_on_thread(f"{self.model}"))
+            threads.append(client.update_on_thread(self.model))
 
         #wait for all threads to finish
         for thread in threads:
@@ -149,7 +151,12 @@ class Server:
             if client.update == None:
                 self.remove_client(client)
             else:
-                update_data.append(client.update)
+                update_data.append({
+                    model: client.update,
+                    id: client.id,
+                    data_size: client.data_size,
+                    current_iteration: client.current_iteration
+                })
 
         debug(f"updated {len(update_data)} clients")
 
@@ -201,5 +208,3 @@ class Server:
             debug("Socket failed")
             self.running = False
             self.clean_threads()
-
-server = Server("server", 6000, 5)

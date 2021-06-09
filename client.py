@@ -8,6 +8,7 @@ def debug(string):
         print(string)
 
 HOST = "127.0.0.1"
+MODEL_SIZE = 4096
 
 class Client:
     def __init__(self, id, server_port):
@@ -35,13 +36,13 @@ class Client:
                 s.sendall(bytes(self.handshake, encoding='utf-8'))
 
                 while 1:
-                    update = s.recv(2048)
+                    update = s.recv(MODEL_SIZE)
                     update = update.decode('utf-8')
                     debug("update received")
 
                     new_update = self.on_update(update)
-                    s.sendall(bytes(f"{new_update}", encoding='utf-8'))
-                    debug(f"update sent {new_update}")
+                    s.sendall(new_update)
+                    debug(f"update sent")
 
         except KeyboardInterrupt:
             debug("Client closing")

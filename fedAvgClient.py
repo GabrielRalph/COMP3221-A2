@@ -10,10 +10,15 @@ class FedAvgClient(Client):
         self.connect_socket()
 
     def on_update(self, w_t):
-        # create new model
+        # convert pickle data w_t into a model
 
-        return MLModel()
+        # update model ** TODO **
+
+        # convert updated model to pickle data
+        # return pickle data
+        return "pickle"
 
 
-client = FedAvgClient("me", 6000, 5)
-client.run()
+
+# client = FedAvgClient("me", 6000, 5)
+# client.run()

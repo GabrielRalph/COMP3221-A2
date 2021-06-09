@@ -11,10 +11,21 @@ class FedAvgServer(Server):
         self.start_socket()
 
     def on_update(self, models):
-        # aggregate
+        # aggregate models
+        # models = [
+        #    {
+        #       id: string,
+        #       data_size: int,
+        #       current_iteration: int,
+        #       model: pickle_data,
+        #    }
+        #]
 
-        return MLModel()
+
+        #return new aggregated model as pickle data
+        return "pickle"
 
 
-fedAvg = FedAvgServer("server", 6000, 6, 123)
-fedAvg.run()
+
+# fedAvg = FedAvgServer("server", 6000, 6, 123)
+# fedAvg.run()
