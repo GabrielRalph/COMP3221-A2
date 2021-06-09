@@ -5,10 +5,14 @@ import socket
 HOST = "127.0.0.1"
 HANDSHAKE_SIZE = 1048
 MODEL_SIZE = 4096
-INIT_TIME = 5
+INIT_TIME = 30
 T = 100
 
+
 DEBUG = True
+if DEBUG:
+    INIT_TIME = 1
+    T = 10
 def debug(string):
     if DEBUG:
         print(f"debug: {string}")
@@ -28,7 +32,7 @@ class ClientHandler:
             self.data_size = int(self.data_size)
         except:
             self.data_size = 0
-        self.update = None
+        self.model = None
 
     # update_on_thread, gets an update on a seperate thread
     #
@@ -38,7 +42,7 @@ class ClientHandler:
     #         after thread has started
     def update_on_thread(self, old_model):
         try:
-            self.update = old_model
+            self.model = old_model
             update_thread = threading.Thread(target=self.get_update)
             update_thread.start()
             debug(f"\t{self.id}: update thread started")
@@ -54,11 +58,11 @@ class ClientHandler:
     def get_update(self):
         try:
             debug(f"\t{self.id}: sending update")
-            self.connection.sendall(self.update)
+            self.connection.sendall(self.model)
             print(f"Getting local model from client {self.id}")
             new = self.connection.recv(MODEL_SIZE)
             debug(f"\t{self.id}: received update")
-            self.update = new
+            self.model = new
             this.current_iteration += 1
         except:
             debug(f"\t{self.id}: error updating")
@@ -113,7 +117,12 @@ class Server:
     # wait INIT_TIME seconds then update continually
     def update_thread_method(self):
         debug(f"update thread started, updating in {INIT_TIME}s")
-        time.sleep(INIT_TIME)
+
+        timer = 0
+        while timer < INIT_TIME and self.running:
+            time.sleep(1)
+            timer += 1
+
         for i in range(T):
             if i != 0:
                 print("Broadcasting new global message")
@@ -148,14 +157,14 @@ class Server:
         update_data = []
         for client in clients:
             #if update failed, remove client from client list
-            if client.update == None:
+            if client.model == None:
                 self.remove_client(client)
             else:
                 update_data.append({
-                    model: client.update,
-                    id: client.id,
-                    data_size: client.data_size,
-                    current_iteration: client.current_iteration
+                    "model": client.model,
+                    "id": client.id,
+                    "data_size": client.data_size,
+                    "current_iteration": client.current_iteration
                 })
 
         debug(f"updated {len(update_data)} clients")
@@ -199,12 +208,15 @@ class Server:
                     # and add it to clients
                     client = ClientHandler(s.accept())
                     self.add_client(client)
+                s.close()
 
         except KeyboardInterrupt:
             debug("\nClosing socket")
             self.running = False
             self.clean_threads()
+            s.close()
         except:
             debug("Socket failed")
             self.running = False
             self.clean_threads()
+            s.close()
