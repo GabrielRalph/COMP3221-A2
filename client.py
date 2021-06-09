@@ -1,6 +1,7 @@
 import threading
 import time
 import socket
+import pickle
 
 DEBUG = True
 def debug(string):
@@ -8,22 +9,21 @@ def debug(string):
         print(string)
 
 HOST = "127.0.0.1"
+SERVER_PORT = 6000
 
 class Client:
-    def __init__(self, id, server_port):
-        self.id = id
-        self.data_size = 100
-        self.port = server_port
+    def __init__(self, id):
+        self.id = id;
+        self.port = SERVER_PORT;
+        self.data_size = 0;
 
     @property
     def handshake(self):
-        return f"{self.id},{self.data_size}"
+        return f"{self.id}|{self.data_size}"
 
-    def on_update(self, old_update):
-        new_update = "some new_update"
-        #do something
+    def on_update(self, server_model):
+        pass
 
-        return new_update
 
     def connect_socket(self):
         try:
@@ -31,16 +31,36 @@ class Client:
 
                 s.connect((HOST, self.port))
 
-                #send id
+                # send handshake message
                 s.sendall(bytes(self.handshake, encoding='utf-8'))
 
                 while 1:
+
+                    print("HERERERERE")
+
+
                     update = s.recv(2048)
-                    update = update.decode('utf-8')
+                    print("HERERERERE")
+
+
+                    update = pickle.loads(update)
+
+
+                    print("HERERERERE")
+
+                    #update = update.decode('utf-8')
                     debug("update received")
+                    debug(update)
+
+                    if update == None:
+                        print("NONE")
+                        exit()
 
                     new_update = self.on_update(update)
-                    s.sendall(bytes(f"{new_update}", encoding='utf-8'))
+
+                    msg = pickle.dumps(new_update)
+                    s.sendall(msg)
+
                     debug(f"update sent {new_update}")
 
         except KeyboardInterrupt:

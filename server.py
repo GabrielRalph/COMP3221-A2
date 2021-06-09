@@ -1,11 +1,11 @@
 import threading
 import time
 import socket
+import pickle
 
 HOST = "127.0.0.1"
 HANDSHAKE_SIZE = 1048
-INIT_TIME = 5
-T = 100
+INIT_TIME = 1
 
 DEBUG = True
 def debug(string):
@@ -14,19 +14,25 @@ def debug(string):
 
 
 class ClientHandler:
-    def __init__(self, connection_tupple):
-        (connection, (host, port)) = connection_tupple
-        self.host = host
-        self.port = port
-        self.connection = connection
+    def __init__(self, connection_tuple):
+        (connection, (host, port)) = connection_tuple;
+        self.connection = connection;
+        self.host = host;
+        self.port = port;
 
         handshake = self.connection.recv(HANDSHAKE_SIZE)
-        (self.id, self.data_size) = handshake.decode('utf-8').split(",")
+        (self.id, self.data_size) = handshake.decode('utf-8').split("|")
+        debug(f"Received handshake ({self.id}, {self.data_size})")
+
         try:
             self.data_size = int(self.data_size)
         except:
+            debug("Error converting data size to integer")
             self.data_size = 0
-        self.update = None
+
+        self.server_model = None;
+        self.client_model = None;
+
 
     # update_on_thread, gets an update on a seperate thread
     #
@@ -36,7 +42,7 @@ class ClientHandler:
     #         after thread has started
     def update_on_thread(self, old_model):
         try:
-            self.update = old_model
+            self.server_model = old_model
             update_thread = threading.Thread(target=self.get_update)
             update_thread.start()
             debug(f"\t{self.id}: update thread started")
@@ -50,29 +56,36 @@ class ClientHandler:
     #
     # update set to None if update fails
     def get_update(self):
-        try:
-            debug(f"\t{self.id}: sending update")
-            self.connection.sendall(bytes(self.update, encoding='utf-8'))
-            print(f"Getting local model from client {self.id}")
-            new = self.connection.recv(self.data_size)
-            debug(f"\t{self.id}: received update")
-            new = new.decode('utf-8')
-            self.update = new
-        except:
-            debug(f"\t{self.id}: error updating")
-            self.update = None
+    #    try:
+        debug(f"\t{self.id}: sending update")
+
+        msg = pickle.dumps(self.server_model)
+
+        self.connection.sendall(msg)
+        print(f"Getting local model from client {self.id[-1]}")
+
+        new_update = self.connection.recv(2048)
+
+        debug(f"\t{self.id}: received update")
+        new_update = pickle.loads(new_update)
+        self.client_model = new_update
+        #except:
+        #    debug(f"\t{self.id}: error updating")
+        #    self.client_model = None
 
 class Server:
-    def __init__(self, id, port, max_clients):
-        self.id = id
-        self.port = port
-        self.max_clients = max_clients
+    def __init__(self, id, port, max_clients, T):
+        self.id = id;
+        self.port = port;
+        self.max_clients = max_clients;
+        self.T = T;
 
 
-        self.clients = {}
-        self.threads = None
-        self.update_thread = None
-        self.running = False
+        self.clients = {};
+        self.threads = None;
+        self.update_thread = None;
+        self.running = False;
+        self.server_model = None;
 
 
     # get_clients, returns a list of all current client handlers
@@ -83,6 +96,7 @@ class Server:
         return clients
 
     # add_client, adds a client to the dictionary of current client handlers
+    # {key: value} => {"client1": client_handler_object}
     #
     # @param client, the client handler to add
     def add_client(self, client):
@@ -100,31 +114,42 @@ class Server:
             self.clients.pop(client.id)
 
 
-    # starts the update process thread
+    # starts the model update thread (model updating thread)
     def start_update_thread(self):
         try:
             self.update_thread = threading.Thread(target=self.update_thread_method)
             self.update_thread.start()
         except:
-            debug("something")
+            debug("Failed to start update thread")
 
-    # wait INIT_TIME seconds then update continually
+    # wait INIT_TIME seconds then update for T iterations
     def update_thread_method(self):
         debug(f"update thread started, updating in {INIT_TIME}s")
-        time.sleep(INIT_TIME)
-        for i in range(T):
-            if i != 0:
+
+        timer = 0;
+        while timer < INIT_TIME and self.running:
+            time.sleep(1)
+            timer += 1
+
+        for t in range(self.T):
+            if t != 0:
                 print("Broadcasting new global message")
-            print(f"Global itteration {i}:")
-            update = self.get_updates()
-            self.model = self.on_update(update)
+
+            print(f"Global iteration {t + 1}:")
+
+            # retrieve the client models
+            updates = self.get_updates()
+
+            # aggregate the client models
+            self.server_model = self.on_updates(self.clients)
+
             if not self.running:
                 debug("update thread ending")
                 return
         self.running = False
         debug("Done")
 
-    # gets updates from all clients in paralel
+    # gets updates from all clients in parallel
     #
     # @return update_data, a list of all updates from all clients
     def get_updates(self):
@@ -133,33 +158,36 @@ class Server:
         debug(f"updating {len(clients)} clients")
         print(f"Total number of clients: {len(clients)}")
 
-        #Get updates from all current clients in parrel
+        #Get updates from all current clients in parallel
         threads = []
         for client in clients:
-            threads.append(client.update_on_thread(f"{self.model}"))
+            threads.append(client.update_on_thread(self.server_model))
 
         #wait for all threads to finish
         for thread in threads:
             thread.join()
 
+        '''
         #get the updates from all clients
         update_data = []
         for client in clients:
             #if update failed, remove client from client list
-            if client.update == None:
+            if client.client_model == None:
                 self.remove_client(client)
+                debug("An update failed and a client was removed")
             else:
-                update_data.append(client.update)
+                update_data.append(client.client_model)
 
         debug(f"updated {len(update_data)} clients")
 
         return update_data
+        '''
 
     # on_update, called once all updates are retreived
     #
     # @param data, a list of all updates from clients
     # @return new_model, the new aggregated model
-    def on_update(self, data):
+    def on_updates(self, data):
         debug("Aggregating new global model")
         debug(data)
         return "new_model"
@@ -201,5 +229,3 @@ class Server:
             debug("Socket failed")
             self.running = False
             self.clean_threads()
-
-server = Server("server", 6000, 5)
