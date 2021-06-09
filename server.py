@@ -64,8 +64,8 @@ class ClientHandler:
             debug(f"\t{self.id}: received update")
             self.model = new
             this.current_iteration += 1
-        except:
-            debug(f"\t{self.id}: error updating")
+        except Exception as e:
+            debug(f"\t{self.id}: error updating: " + str(e))
             self.update = None
 
 class Server:
