@@ -59,7 +59,7 @@ class ClientHandler:
             new = self.connection.recv(MODEL_SIZE)
             debug(f"\t{self.id}: received update")
             self.update = new
-            this.current_iteration +== 1
+            this.current_iteration += 1
         except:
             debug(f"\t{self.id}: error updating")
             self.update = None
