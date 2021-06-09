@@ -41,8 +41,8 @@ if __name__ == "__main__":
     #    2. Initialise Client Parameters
     learning_rate = 0.01;
     batch_size = 20;
-
+    server_port = 6000;
 
     #   3. Launch Client
-    client = FedAvgClient(client_id, opt_method, learning_rate, batch_size);
+    client = FedAvgClient(client_id, server_port, opt_method, learning_rate, batch_size);
     client.run();

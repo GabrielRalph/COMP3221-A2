@@ -126,7 +126,7 @@ class Server:
         for i in range(T):
             if i != 0:
                 print("Broadcasting new global message")
-            print(f"Global itteration {i}:")
+            print(f"Global iteration {i}:")
             update = self.get_updates()
             self.model = self.on_update(update)
             if not self.running:
