@@ -12,7 +12,7 @@ T = 100
 DEBUG = True
 if DEBUG:
     INIT_TIME = 1
-    T = 10
+    T = 5
 def debug(string):
     if DEBUG:
         print(f"debug: {string}")

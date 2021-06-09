@@ -23,10 +23,9 @@ def p(data):
     return pickle.dumps(data)
 
 class FedAvgServer(Server):
-    def __init__(self, id, port, max_clients, T, M):
-        super(FedAvgServer, self).__init__(id, port, max_clients, T);
+    def __init__(self, id, port, max_clients, M):
+        super(FedAvgServer, self).__init__(id, port, max_clients);
         self.total_train_samples = 0;
-        self.T = T;
         self.M = M;
         # initialise model
         self.model = MCLR();
@@ -53,7 +52,7 @@ class FedAvgServer(Server):
         self.global_round += 1
 
         # calculate avg accuracy
-        self.avg_acc = self.evaluate()
+        self.avg_acc = self.evaluate(models)
         self.acc.append(self.avg_acc)
         print(f"Global Round: {str(self.global_round)} Average accuracy across all clients : {str(avg_acc)}")
 
@@ -73,8 +72,8 @@ class FedAvgServer(Server):
         # aggregate client models and return new server model
         if self.M == 0:
             for cd in models:
-                for server_param, user_param in zip(up(self.model).parameters(), up(client.model).parameters()):
-                    server_param.data = server_param.data + user_param.data.clone() * client.data_size / self.total_train_samples
+                for server_param, user_param in zip(up(self.model).parameters(), up(cd["model"]).parameters()):
+                    server_param.data = server_param.data + user_param.data.clone() * cd["data_size"] / self.total_train_samples
             return p(self.model)
         elif self.M > 0:
 
@@ -86,14 +85,14 @@ class FedAvgServer(Server):
             for m in range(self.M):
                 #random user index is chosen without replacement
                 index = possible_user_indexes.pop(random.randint(0, len(possible_user_indexes) - 1))
-                user = users[index]
+                cd = models[index]
 
-                for server_param, user_param in zip(up(self.model).parameters(), up(client.model).parameters()):
-                    server_param.data = server_param.data + user_param.data.clone() * client.data_size / self.total_train_samples
+                for server_param, user_param in zip(up(self.model).parameters(), up(cd["model"]).parameters()):
+                    server_param.data = server_param.data + user_param.data.clone() * cd["data_size"] / self.total_train_samples
             return p(self.model)
 
 
-    def evaluate(self):
+    def evaluate(self, models):
         total_accurancy = 0
         for clients in self.clients.values():
             total_accurancy += clients.test()

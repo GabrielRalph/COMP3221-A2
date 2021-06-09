@@ -38,9 +38,8 @@ if __name__ == "__main__":
     elif sub_sampling == 1: M = 2;
     else: M = sub_sampling;
 
-    T = 100;
     K = 5;
 
     #   3. Launch Server
-    server = FedAvgServer("server", port_num, K, T, M);
+    server = FedAvgServer("server", port_num, K, M);
     server.run();
