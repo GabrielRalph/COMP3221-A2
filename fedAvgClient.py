@@ -2,6 +2,8 @@ from client import Client
 from mlModel import MLModel
 
 class FedAvgClient(Client):
+    def __init__(self, id, server_port, params):
+        super(FedAvgClient, self).__init__(id, server_port)
 
     def run(self):
         self.data_size = 1024

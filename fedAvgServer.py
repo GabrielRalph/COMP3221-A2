@@ -2,6 +2,9 @@ from server import Server
 from mlModel import MLModel
 
 class FedAvgServer(Server):
+    def __init__(self, id, port, max_clients, params):
+        super(FedAvgServer, self).__init__(id, port, max_clients)
+
 
     def run(self):
         self.model = "initialise model"
