@@ -1,7 +1,7 @@
 import threading
 import time
 import socket
-from mlModel import MLModel, MCLR
+from mlModel import MCLR
 
 import json
 import pickle
@@ -147,7 +147,7 @@ class Server:
         self.update_thread = None
         self.running = False
         self.model = None
-        self.start_time = time.time()
+        self.start_time = None
         self.end_time = None
 
 
@@ -202,6 +202,8 @@ class Server:
             if len(self.clients) == 5:
                 print("5 Clients connected, Starting...")
                 break
+
+        self.start_time = time.time()
 
         for i in range(T):
 

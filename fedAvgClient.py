@@ -1,5 +1,5 @@
 from client import Client
-from mlModel import MLModel, MCLR
+from mlModel import MCLR
 
 import torch
 import torch.nn as nn
@@ -23,11 +23,16 @@ class FedAvgClient(Client):
 
         self.data_size = self.get_num_train_samples();
         self.local_iteration = 0;
+        self.learning_rate = learning_rate;
 
         if opt_method == 0: #if GD
             self.batch_size = self.data_size;
+            #self.learning_rate = 0.05;
+            #self.learning_rate = 0.001;
         elif opt_method == 1: #if MINIBATCHGD
             self.batch_size = batch_size;
+            #self.learning_rate = 0.001;
+            #self.learning_rate = 0.05;
 
         self.X_train, self.y_train, self.X_test, self.y_test, self.train_samples, self.test_samples = self.get_data()
         self.train_data = [(x, y) for x, y in zip(self.X_train, self.y_train)]
@@ -38,7 +43,7 @@ class FedAvgClient(Client):
         self.loss = nn.NLLLoss();
         self.model = MCLR();
         self.id = id;
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
 
 
     def run(self):

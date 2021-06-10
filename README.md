@@ -84,3 +84,7 @@ The ***server program*** on exit (***using CTRL+C***) will output two graphs in 
 * The server program requires the user to press ***CTRL + C*** to ***exit and view the graphs***
 
 * You must ***close the graphs*** for the ***server program*** to fully exit
+
+* ***Restarting*** the ***server program*** too fast can return an error saying the socket is still in use. Waiting 10 seconds will ensure that the socket is available again
+
+* When changing the batch_size parameter ***you must*** change the parameter in both files ***"COMP3221_FLServer.py"*** and ***"COMP3221_FLClient.py"***

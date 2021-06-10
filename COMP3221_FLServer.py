@@ -1,6 +1,4 @@
 from fedAvgServer import FedAvgServer
-from mlModel import MLModel
-
 
 import matplotlib.pyplot as plt
 import sys
@@ -60,7 +58,7 @@ if __name__ == "__main__":
     print()
     print()
     print(f"Final AVG Loss: {str(server.avg_loss)}\nFinal AVG Accuracy {str(server.avg_acc)}")
-    if server.end_time:
+    if server.end_time and server.start_time:
         print("Run-time was :", server.end_time - server.start_time)
     print("Batch size:", str(batch_size), "Learning rate:", str(learning_rate), "Sub-sampling:", str(M));
 

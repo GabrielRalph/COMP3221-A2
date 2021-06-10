@@ -1,5 +1,4 @@
 from fedAvgClient import FedAvgClient
-from mlModel import MLModel
 
 import sys
 
