@@ -7,9 +7,6 @@ import sys
 import time
 
 
-start_time = time.time()
-
-
 if __name__ == "__main__":
 
     #   1. Verify and initialise command arguments
@@ -46,17 +43,26 @@ if __name__ == "__main__":
     else: M = sub_sampling;
 
     K = 5;
+    batch_size = 20;
+    learning_rate = 0.01;
 
     #   3. Launch Server
-    server = FedAvgServer("server", port_num, K, M);
-    server.run();
+    try:
+        server = FedAvgServer("server", port_num, K, M);
+        server.run();
+    except KeyboardInterrupt:
+        server.running = False;
+        server.clean_threads();
 
 
-    #   4. Graph Results
-
-    end_time = time.time()
+    #   4. Print Results
+    print()
+    print()
+    print()
     print(f"Final AVG Loss: {str(server.avg_loss)}\nFinal AVG Accuracy {str(server.avg_acc)}")
-    print("Run-time was :", end_time - start_time)
+    if server.end_time:
+        print("Run-time was :", server.end_time - server.start_time)
+    print("Batch size:", str(batch_size), "Learning rate:", str(learning_rate), "Sub-sampling:", str(M));
 
     #Do final plots (LOSS)
     plt.figure(1,figsize=(5, 5))

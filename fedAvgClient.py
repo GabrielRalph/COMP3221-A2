@@ -12,15 +12,17 @@ import json
 import pickle
 import copy
 
-
+DEBUG = False
+def debug(string):
+    if DEBUG:
+        print(f"debug: {string}")
 
 class FedAvgClient(Client):
     def __init__(self, id, server_port, opt_method, learning_rate, batch_size):
         super(FedAvgClient, self).__init__(id, server_port)
-        #self.opt_method = opt_method;
+
         self.data_size = self.get_num_train_samples();
         self.local_iteration = 0;
-        #self.learning_rate = learning_rate;
 
         if opt_method == 0: #if GD
             self.batch_size = self.data_size;
@@ -50,18 +52,13 @@ class FedAvgClient(Client):
     def on_update(self, model_dict):
         # create new model from global server model
 
-
-        #self.model = model_dict["model"]
-
-        # set to new global model
-        self.model = copy.deepcopy(model_dict["model"])
-
         # update to new global model parameters
         self.set_parameters(model_dict["model"])
 
         self.local_iteration += 1;
 
-        print("I am client", str(self.id[-1]));
+        print(f"I am client {str(self.id[-1])}");
+        debug(f"Round {self.local_iteration}");
         print("Receiving new global model");
 
         # evaluate global server model training loss

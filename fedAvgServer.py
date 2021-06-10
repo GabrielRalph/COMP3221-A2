@@ -14,7 +14,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import pickle
 
-DEBUG = True
+DEBUG = False
 def debug(string):
     if DEBUG:
         print(f"debug: {string}")
@@ -36,10 +36,8 @@ class FedAvgServer(Server):
 
     def run(self):
 
-        #start socket and add clients
+        #start socket, add clients and begin iterating
         self.start_socket();
-
-
 
 
     def on_updates(self, models):
@@ -53,14 +51,12 @@ class FedAvgServer(Server):
         #   "current_iteration": client.current_iteration
         # } ]
 
-
         self.global_round += 1
-
 
         # calculate avg accuracy
         self.avg_acc = self.evaluate(models)
         self.acc.append(self.avg_acc)
-        print(f"Global Round: {str(self.global_round)} Average accuracy across all clients : {str(self.avg_acc)}")
+        debug(f"Global Round: {str(self.global_round)} Average accuracy across all clients : {str(self.avg_acc)}")
 
 
         # calculate avg loss
@@ -84,22 +80,32 @@ class FedAvgServer(Server):
             for cd in models:
                 for server_param, user_param in zip(self.model.parameters(), cd["model"].parameters()):
                     server_param.data = server_param.data + user_param.data.clone() * cd["data_size"] / self.total_train_samples
-            return self.model
+            return
+
         elif self.M > 0:
 
             random.seed(a=None); #Seeded on time
             #possible client indexes (5 clients) = [0,1,2,3,4];
             client_indexes = [x for x in range(0, len(models))]
 
-            for m in range(self.M):
+            # incase of less clients than sub-sampling number
+            if len(models) >= self.M:
+                n_selections = self.M;
+            else:
+                n_selections = len(models);
+
+            for m in range(n_selections):
                 #random client index is chosen without replacement
-                index = client_indexes.pop(random.randint(0, len(client_indexes) - 1))
-                cd = models[index]
+                if len(client_indexes) == 1:
+                    cd = models[0]
+                else:
+                    index = client_indexes.pop(random.randint(0, len(client_indexes) - 1))
+                    cd = models[index]
 
                 for server_param, user_param in zip(self.model.parameters(), cd["model"].parameters()):
                     server_param.data = server_param.data + user_param.data.clone() * cd["data_size"] / self.total_train_samples
 
-            return self.model
+            return
 
 
     def evaluate(self, models):
