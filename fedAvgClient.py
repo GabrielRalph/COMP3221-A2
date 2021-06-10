@@ -10,40 +10,33 @@ import matplotlib
 import matplotlib.pyplot as plt
 import json
 import pickle
+import copy
 
-#unpickle
-def up(data):
-    return pickle.loads(data)
-
-#pickle
-def p(data):
-    return pickle.dumps(data)
 
 
 class FedAvgClient(Client):
     def __init__(self, id, server_port, opt_method, learning_rate, batch_size):
         super(FedAvgClient, self).__init__(id, server_port)
-        self.opt_method = opt_method;
+        #self.opt_method = opt_method;
         self.data_size = self.get_num_train_samples();
         self.local_iteration = 0;
-        self.learning_rate = learning_rate;
-        self.model = p(MCLR());
-        self.id = id;
+        #self.learning_rate = learning_rate;
+
+        if opt_method == 0: #if GD
+            self.batch_size = self.data_size;
+        elif opt_method == 1: #if MINIBATCHGD
+            self.batch_size = batch_size;
 
         self.X_train, self.y_train, self.X_test, self.y_test, self.train_samples, self.test_samples = self.get_data()
         self.train_data = [(x, y) for x, y in zip(self.X_train, self.y_train)]
         self.test_data = [(x, y) for x, y in zip(self.X_test, self.y_test)]
-        self.trainloader = DataLoader(self.train_data, batch_size, shuffle=True)
+
+        self.trainloader = DataLoader(self.train_data, self.batch_size, shuffle=True)
         self.testloader = DataLoader(self.test_data, self.test_samples)
-        self.optimizer = torch.optim.SGD(up(self.model).parameters(), lr=learning_rate)
         self.loss = nn.NLLLoss();
-
-
-        if opt_method == 0: #if GD
-            self.batch_size = self.data_size;
-        elif opt_method == 0: #if MINIBATCHGD
-            self.batch_size = self.batch_size;
-
+        self.model = MCLR();
+        self.id = id;
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate)
 
 
     def run(self):
@@ -54,13 +47,17 @@ class FedAvgClient(Client):
 
 
 
-    def on_update(self, server_model):
+    def on_update(self, model_dict):
         # create new model from global server model
 
-        #UNPICKLE
-        MODEL = up(server_model)
 
-        self.model = MODEL;
+        #self.model = model_dict["model"]
+
+        # set to new global model
+        self.model = copy.deepcopy(model_dict["model"])
+
+        # update to new global model parameters
+        self.set_parameters(model_dict["model"])
 
         self.local_iteration += 1;
 
@@ -70,35 +67,35 @@ class FedAvgClient(Client):
         # evaluate global server model training loss
         for batch_idx, (X, y) in enumerate(self.testloader):
             output = self.model(X)
-            loss = self.loss(output, y)
+            loss = self.loss(output, y).data.item()
             break
-        print("Training loss:", str(loss.data.item()));
+        print("Training loss:", str(loss));
 
         # test global server model accuracy
         acc = self.test();
         print("Testing accuracy:", str(acc) + "%");
 
         #write global model performance to text file
-        self.update_log_file(str(self.local_iteration), str(acc), str(loss.data.item()));
+        self.update_log_file(str(self.local_iteration), str(acc), str(loss));
 
 
         print("Local training...");
         #train for 2 epochs and obtain loss as return value
-        loss = self.train(2);
+        loss = self.train(2).item();
 
         print("Sending new local model");
 
+        # test new local model accuracy
+        acc = self.test();
 
-        #PICKLE MODEL
-        self.model = p(MODEL);
+        model_dict["model"] = self.model;
+        model_dict["acc"] = acc;
+        model_dict["loss"] = loss;
 
-        return self.model;
+        return model_dict;
 
 
     def train(self, epochs):
-
-        #UNPICKLE
-        self.model = up(self.model)
 
         for epoch in range(epochs):
             self.model.train()
@@ -111,35 +108,24 @@ class FedAvgClient(Client):
                 self.optimizer.step()
                 break
 
-        #PICKLE
-        self.model = p(self.model)
-
         return loss.data
 
 
     def test(self):
-
-        #UNPICKLE
-        self.model = up(self.model)
-
         self.model.eval()
         test_acc = 0
         for x, y in self.testloader:
             output = self.model(x)
             test_acc += (torch.sum(torch.argmax(output, dim=1) == y) * 1. / y.shape[0]).item()
-
-        #PICKLE
-        self.model = p(self.model)
-
         return test_acc
 
 
     def update_log_file(self, t, acc, loss):
         #append updated performance log file for client
-        file_name = "client" + str(self.id) + "_log.txt"
+        file_name = str(self.id) + "_log.txt"
         cf = open(file_name, "a")
 
-        log_file_lines = ["Client: " + str(self.id) + ", Round: " + t,
+        log_file_lines = ["Client: " + str(self.id[-1]) + ", Round: " + t,
         "Training loss: " + loss,
         "Testing accuracy: " + acc + "%"];
 
@@ -182,6 +168,10 @@ class FedAvgClient(Client):
         y_test = torch.Tensor(y_test).type(torch.int64)
         train_samples, test_samples = len(y_train), len(y_test)
         return X_train, y_train, X_test, y_test, train_samples, test_samples
+
+    def set_parameters(self, model):
+        for old_param, new_param in zip(self.model.parameters(), model.parameters()):
+            old_param.data = new_param.data.clone()
 
     def create_log_file(self):
         file_name = str(self.id) + "_log.txt"

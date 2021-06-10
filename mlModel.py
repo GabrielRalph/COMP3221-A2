@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import json
 
 class MCLR(nn.Module):
     def __init__(self):
@@ -12,6 +13,7 @@ class MCLR(nn.Module):
         x = self.fc1(x)
         output = F.log_softmax(x, dim=1)
         return output
+
 
 class MLModel():
 

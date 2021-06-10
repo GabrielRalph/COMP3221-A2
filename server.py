@@ -2,6 +2,12 @@ import threading
 import time
 import socket
 
+import json
+import pickle
+from struct import pack, unpack
+import copy
+
+
 HOST = "127.0.0.1"
 HANDSHAKE_SIZE = 1048
 MODEL_SIZE = 4096
@@ -11,8 +17,8 @@ T = 100
 
 DEBUG = True
 if DEBUG:
-    INIT_TIME = 1
-    T = 5
+    INIT_TIME = 5
+    T = 3
 def debug(string):
     if DEBUG:
         print(f"debug: {string}")
@@ -25,6 +31,8 @@ class ClientHandler:
         self.port = port
         self.connection = connection
         self.current_iteration = 0;
+        self.acc = None
+        self.loss = None
 
         handshake = self.connection.recv(HANDSHAKE_SIZE)
         (self.id, self.data_size) = handshake.decode('utf-8').split(",")
@@ -32,7 +40,28 @@ class ClientHandler:
             self.data_size = int(self.data_size)
         except:
             self.data_size = 0
+
         self.model = None
+
+    def send_data(self, data, socket):
+        msg = pickle.dumps(data)
+
+        length = pack('>Q', len(msg))
+
+        self.connection.sendall(length)
+        self.connection.sendall(msg)
+
+    def recv_data(self, socket):
+        bs = self.connection.recv(8)
+        (length,) = unpack('>Q', bs)
+        #print(length)
+        msg = self.connection.recv(length)
+        data = pickle.loads(msg)
+        return data
+
+    def set_parameters(self, model):
+        for old_param, new_param in zip(self.model.parameters(), model.parameters()):
+            old_param.data = new_param.data.clone()
 
     # update_on_thread, gets an update on a seperate thread
     #
@@ -42,7 +71,7 @@ class ClientHandler:
     #         after thread has started
     def update_on_thread(self, old_model):
         try:
-            self.model = old_model
+            self.model = copy.deepcopy(old_model)
             update_thread = threading.Thread(target=self.get_update)
             update_thread.start()
             debug(f"\t{self.id}: update thread started")
@@ -58,15 +87,43 @@ class ClientHandler:
     def get_update(self):
         try:
             debug(f"\t{self.id}: sending update")
-            self.connection.sendall(self.model)
-            print(f"Getting local model from client {self.id}")
-            new = self.connection.recv(MODEL_SIZE)
-            debug(f"\t{self.id}: received update")
-            self.model = new
-            this.current_iteration += 1
+            debug("Is model none? " + str(self.model == None))
+
+            dict = {"model": self.model, "acc": self.acc, "loss": self.loss}
+            debug(dict)
+
+            self.send_data(dict, self.connection)
+
+            debug("done sending")
+
+            #self.connection.sendall(self.model)
+            print(f"Getting local model from client {self.id[-1]}")
+
+            data = self.recv_data(self.connection)
+
+            debug(data)
+
+            new_model = data["model"]
+            new_acc = data["acc"]
+            new_loss = data["loss"]
+
+            self.model = copy.deepcopy(new_model)
+            self.set_parameters(new_model)
+
+            self.acc = new_acc
+            self.loss = new_loss
+
+            debug(f"{self.acc}, {self.loss}")
+
+            self.current_iteration += 1
+
+            return
+
         except Exception as e:
             debug(f"\t{self.id}: error updating: " + str(e))
-            self.update = None
+            self.model = None
+            return
+
 
 class Server:
     def __init__(self, id, port, max_clients):
@@ -111,8 +168,9 @@ class Server:
         try:
             self.update_thread = threading.Thread(target=self.update_thread_method)
             self.update_thread.start()
-        except:
-            debug("something")
+            return
+        except Exception as e:
+            debug("Error launching update thread: " + str(e))
 
     # wait INIT_TIME seconds then update continually
     def update_thread_method(self):
@@ -124,16 +182,24 @@ class Server:
             timer += 1
 
         for i in range(T):
-            if i != 0:
-                print("Broadcasting new global message")
-            print(f"Global iteration {i}:")
-            update = self.get_updates()
-            self.model = self.on_update(update)
+
+#            if i != 0:
+            print("Broadcasting new global message")
+
+            print(f"Global iteration {i + 1}:")
+            update_data = self.get_updates()
+
+            self.model = self.on_updates(update_data)
+
+            debug("Model received by clients")
+            debug(self.model)
+
             if not self.running:
                 debug("update thread ending")
                 return
         self.running = False
         debug("Done")
+        return
 
     # gets updates from all clients in paralel
     #
@@ -164,6 +230,8 @@ class Server:
                     "model": client.model,
                     "id": client.id,
                     "data_size": client.data_size,
+                    "acc": client.acc,
+                    "loss": client.loss,
                     "current_iteration": client.current_iteration
                 })
 
@@ -176,9 +244,7 @@ class Server:
     # @param data, a list of all updates from clients
     # @return new_model, the new aggregated model
     def on_update(self, data):
-        debug("Aggregating new global model")
-        debug(data)
-        return "new_model"
+        pass
 
     def clean_threads(self):
         if isinstance(self.update_thread, threading.Thread):
@@ -215,8 +281,8 @@ class Server:
             self.running = False
             self.clean_threads()
             s.close()
-        except:
-            debug("Socket failed")
+        except Exception as e:
+            debug("Socket failed: " + str(e))
             self.running = False
             self.clean_threads()
             s.close()

@@ -2,6 +2,7 @@ from fedAvgServer import FedAvgServer
 from mlModel import MLModel
 
 
+import matplotlib.pyplot as plt
 import sys
 import time
 
@@ -54,7 +55,7 @@ if __name__ == "__main__":
     #   4. Graph Results
 
     end_time = time.time()
-    print(f"Final AVG Loss: {str(server.avg_loss.item())}\nFinal AVG Accuracy {str(server.avg_acc)}")
+    print(f"Final AVG Loss: {str(server.avg_loss)}\nFinal AVG Accuracy {str(server.avg_acc)}")
     print("Run-time was :", end_time - start_time)
 
     #Do final plots (LOSS)
